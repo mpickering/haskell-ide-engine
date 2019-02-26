@@ -70,8 +70,9 @@ applyOneCmd = CmdSync $ \(AOP uri pos title) -> do
 
 applyOneCmd' :: Uri -> OneHint -> IdeGhcM (IdeResult WorkspaceEdit)
 applyOneCmd' uri oneHint = pluginGetFile "applyOne: " uri $ \fp -> do
-      revMapp <- GM.mkRevRedirMapFunc
-      res <- GM.withMappedFile fp $ \file' -> liftToGhc $ applyHint file' (Just oneHint) revMapp
+      revMapp <- return id --GM.mkRevRedirMapFunc
+      res <- liftToGhc $ applyHint fp (Just oneHint) revMapp
+        --GM.withMappedFile fp $ \file' -> liftToGhc $ applyHint file' (Just oneHint) revMapp
       logm $ "applyOneCmd:file=" ++ show fp
       logm $ "applyOneCmd:res=" ++ show res
       case res of
@@ -88,8 +89,9 @@ applyAllCmd = CmdSync $ \uri -> do
 
 applyAllCmd' :: Uri -> IdeGhcM (IdeResult WorkspaceEdit)
 applyAllCmd' uri = pluginGetFile "applyAll: " uri $ \fp -> do
-      revMapp <- GM.mkRevRedirMapFunc
-      res <- GM.withMappedFile fp $ \file' -> liftToGhc $ applyHint file' Nothing revMapp
+      revMapp <- return id --TODO: GM.mkRevRedirMapFunc
+      res <- liftToGhc $ applyHint fp Nothing revMapp
+        --GM.withMappedFile fp $ \file' -> liftToGhc $ applyHint file' Nothing revMapp
       logm $ "applyAllCmd:res=" ++ show res
       case res of
         Left err -> return $ IdeResultFail (IdeError PluginError
@@ -105,7 +107,8 @@ lintCmd = CmdSync $ \uri -> do
 -- AZ:TODO: Why is this in IdeGhcM?
 lintCmd' :: Uri -> IdeGhcM (IdeResult PublishDiagnosticsParams)
 lintCmd' uri = pluginGetFile "lintCmd: " uri $ \fp -> do
-      res <- GM.withMappedFile fp $ \file' -> liftIO $ runExceptT $ runLintCmd file' []
+      res <- liftIO $ runExceptT $ runLintCmd fp []
+        --TODO: GM.withMappedFile fp $ \file' -> liftIO $ runExceptT $ runLintCmd file' []
       case res of
         Left diags ->
           return (IdeResultOk (PublishDiagnosticsParams (filePathToUri fp) $ List diags))
