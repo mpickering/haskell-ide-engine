@@ -1,5 +1,5 @@
 name:                haskell-ide-engine
-version:             1.0.0.0
+version:             0.10.0.0
 synopsis:            Provide a common engine to power any Haskell IDE
 description:         Please see README.md
 homepage:            http://github.com/githubuser/haskell-ide-engine#readme
@@ -69,8 +69,8 @@ library
                      , gitrev >= 1.1
                      , haddock-api
                      , haddock-library
-                     , haskell-lsp == 0.13.*
-                     , haskell-lsp-types == 0.13.*
+                     , haskell-lsp == 0.14.*
+                     , haskell-lsp-types == 0.14.*
                      , haskell-src-exts
                      , hie-plugin-api
                      , hlint (>= 2.0.11 && < 2.1.18) || >= 2.1.22
@@ -280,8 +280,8 @@ test-suite func-test
                      , filepath
                      , lsp-test >= 0.5.2
                      , haskell-ide-engine
-                     , haskell-lsp-types == 0.13.*
-                     , haskell-lsp == 0.13.*
+                     , haskell-lsp-types == 0.14.*
+                     , haskell-lsp == 0.14.*
                      , hie-test-utils
                      , hie-plugin-api
                      , hspec
