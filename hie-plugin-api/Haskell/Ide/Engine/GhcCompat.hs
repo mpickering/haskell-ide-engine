@@ -450,7 +450,7 @@ pattern HsValBindsCompat f <-
 
 pattern ValBindsCompat f g <-
 #if __GLASGOW_HASKELL__ < 806
-  ValBinds f g
+  ValBindsIn f g
 #else
   ValBinds _ f g
 #endif
@@ -484,7 +484,7 @@ pattern SigDCompat f <-
 
 pattern MatchCompat ms <-
 #if __GLASGOW_HASKELL__ < 806
-   Match ({ GHC.m_grhss = GHC.GRHSs { GHC.grhssLocalBinds = ms } })
+   Match { GHC.m_grhss = GHC.GRHSs { GHC.grhssLocalBinds = ms } }
 #else
   (gomatch' -> ms)
 

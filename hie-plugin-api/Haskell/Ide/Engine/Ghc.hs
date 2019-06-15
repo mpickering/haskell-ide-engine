@@ -249,7 +249,8 @@ setTypecheckedModule_load uri =
     canonUri <- toNormalizedUri <$> canonicalizeUri uri
     let diags = Map.insertWith Set.union canonUri Set.empty diags'
     debugm "setTypecheckedModule: after ghc-mod"
-    debugm ("Diags: " <> show diags')
+    debugm ("Diags': " <> show diags')
+    debugm ("Diags: " <> show diags)
     let collapse Nothing = (Nothing, [])
         collapse (Just (n, xs)) = (n, xs)
 
@@ -275,7 +276,7 @@ setTypecheckedModule_load uri =
 
       (Nothing, ts) -> do
         debugm $ "setTypecheckedModule: Didn't get typechecked or parsed module for: " ++ show fp
-        --debugm $ "setTypecheckedModule: errs: " ++ show errs
+        debugm $ "setTypecheckedModule: diags': " ++ show diags'
         cacheModules rfm ts
         failModule fp
 

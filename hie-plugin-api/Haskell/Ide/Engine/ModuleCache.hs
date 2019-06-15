@@ -51,6 +51,10 @@ import           Haskell.Ide.Engine.GhcModuleCache
 import           Haskell.Ide.Engine.MultiThreadState
 import           Haskell.Ide.Engine.PluginsIdeMonads
 import           Haskell.Ide.Engine.GhcUtils
+
+import System.Mem
+import System.Mem.Weak
+import System.IO
 -- ---------------------------------------------------------------------
 
 modifyCache :: (HasGhcModuleCache m) => (GhcModuleCache -> GhcModuleCache) -> m ()
@@ -132,12 +136,12 @@ ifCachedInfo :: (HasGhcModuleCache m, MonadIO m) => FilePath -> a -> (CachedInfo
 ifCachedInfo fp def callback = do
   muc <- getUriCache fp
   case muc of
-    Just (UriCacheSuccess uc) -> callback (cachedInfo uc)
+    Just (UriCacheSuccess _ uc) -> callback (cachedInfo uc)
     _ -> return def
 
 withCachedInfo :: FilePath -> a -> (CachedInfo -> IdeDeferM a) -> IdeDeferM a
 withCachedInfo fp def callback = deferIfNotCached fp go
-  where go (UriCacheSuccess uc) = callback (cachedInfo uc)
+  where go (UriCacheSuccess _ uc) = callback (cachedInfo uc)
         go UriCacheFailed = return def
 
 ifCachedModule :: (HasGhcModuleCache m, MonadIO m, CacheableModule b) => FilePath -> a -> (b -> CachedInfo -> m a) -> m a
@@ -156,7 +160,7 @@ ifCachedModuleM fp k callback = do
   let x = do
         res <- muc
         case res of
-          UriCacheSuccess uc -> do
+          UriCacheSuccess _ uc -> do
             let ci = cachedInfo uc
             cm <- fromUriCache uc
             return (ci, cm)
@@ -192,11 +196,6 @@ withCachedModule :: CacheableModule b => FilePath -> a -> (b -> CachedInfo -> Id
 withCachedModule fp def callback = deferIfNotCached fp go
   where go (UriCacheSuccess uc@(UriCache _ _ _ _)) =
           case fromUriCache uc of
-            Just modul -> callback modul (cachedInfo uc)
-            Nothing -> wrap (Defer fp go)
-        go UriCacheFailed = return def
-
--- | Calls its argument with the CachedModule for a given URI
 -- along with any data that might be stored in the ModuleCache.
 -- If the module is not already cached, then the callback will be
 -- called as soon as it is available.
@@ -210,7 +209,7 @@ withCachedModuleAndData :: forall a b. (ModuleCache a)
 withCachedModuleAndData fp def callback = deferIfNotCached fp go
   where go (UriCacheSuccess (uc@(UriCache info _ (Just tm) dat))) =
           lookupCachedData fp tm info dat >>= callback tm (cachedInfo uc)
-        go (UriCacheSuccess (UriCache { cachedTcMod = Nothing })) = wrap (Defer fp go)
+        go (UriCacheSuccess l (UriCache { cachedTcMod = Nothing })) = wrap (Defer fp go)
         go UriCacheFailed = return def
 
 getUriCache :: (HasGhcModuleCache m, MonadIO m) => FilePath -> m (Maybe UriCacheResult)
@@ -235,8 +234,9 @@ lookupCachedData fp tm info dat = do
     Nothing -> do
       val <- cacheDataProducer tm info
       let dat' = Map.insert (typeOf val) (toDyn val) dat
-          newUc = UriCache info (GHC.tm_parsed_module tm) (Just tm) dat'
-      modifyCache (\s -> s {uriCaches = Map.insert canonical_fp (UriCacheSuccess newUc)
+          newUc = UriCache info (GHC.tm_parsed_module tm) (Just tm) dat' h
+      res <- liftIO $ mkLeakable newUc
+      modifyCache (\s -> s {uriCaches = Map.insert canonical_fp res
                                                   (uriCaches s)})
       return val
 
@@ -280,9 +280,23 @@ cacheModule fp modul = do
             pm = GHC.tm_parsed_module tm
         return $ UriCache info pm (Just tm) mempty
 
-  let res = UriCacheSuccess newUc
+  res <- liftIO $ mkLeakable newUc
+
+  maybeOldUc <- (Map.lookup canonical_fp . uriCaches) <$> getModuleCache 
+
   modifyCache $ \gmc ->
       gmc { uriCaches = Map.insert canonical_fp res (uriCaches gmc) }
+
+  liftIO $ hPutStrLn stderr "cacheModule"
+  -- check leaks
+  case maybeOldUc of
+    Just (UriCacheSuccess (Leakable tcptr psptr) _) -> do
+      liftIO performGC
+      res <- liftIO $ deRefWeak tcptr
+      case res of
+        Just _ -> error $ "leaking: " <> canonical_fp
+        Nothing -> error $ "not leaking: " <> canonical_fp
+    Nothing -> return ()
 
   -- execute any queued actions for the module
   runDeferredActions canonical_fp res
@@ -335,14 +349,24 @@ cacheInfoNoClear uri ci = do
     )
   where
     updateCachedInfo :: UriCacheResult -> UriCacheResult
-    updateCachedInfo (UriCacheSuccess old) = UriCacheSuccess (old { cachedInfo = ci })
+    updateCachedInfo (UriCacheSuccess l old) = UriCacheSuccess l (old { cachedInfo = ci })
     updateCachedInfo UriCacheFailed        = UriCacheFailed
 
 -- | Deletes a module from the cache
 deleteCachedModule :: (MonadIO m, HasGhcModuleCache m) => FilePath -> m ()
 deleteCachedModule uri = do
   uri' <- liftIO $ canonicalizePath uri
+  mucr <- (Map.lookup uri' . uriCaches) <$> getModuleCache
+  liftIO $ hPutStrLn stderr "deleteCachedModule"
+  let (Leakable tcptr psptr) = case mucr of
+                                  Just (UriCacheSuccess l _) -> l
+                                  _ -> error "deleteCachedModule: nothing to delete"
   modifyCache (\s -> s { uriCaches = Map.delete uri' (uriCaches s) })
+  liftIO performGC
+  res <- liftIO $ deRefWeak tcptr
+  case res of
+    Just _ -> error $ "leaking: " <> uri'
+    Nothing -> error $ "not leaking: " <> uri'
 
 -- ---------------------------------------------------------------------
 -- | A ModuleCache is valid for the lifetime of a CachedModule
