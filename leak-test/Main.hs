@@ -7,13 +7,15 @@ import Control.Concurrent
 import Control.Monad
 
 
-main = runSessionWithConfig (defaultConfig { logStdErr = True, logMessages = True, messageTimeout = 500 }) "hie -d" fullCaps "/Users/luke/Source/lsp-test" $ do
+main = runSessionWithConfig (defaultConfig { logStdErr = True, logMessages = True, messageTimeout = 500 }) "/home/matt/haskell-ide-engine/prof-wrapper" fullCaps "/home/matt/lsp-test" $ do
   doc <- openDoc "src/Language/Haskell/LSP/Test/Parsing.hs" "haskell"
-  liftIO $ getLine
   waitForDiagnostics
-  replicateM_ 10 $ do
+  replicateM_ 50 $ do
     liftIO $ putStrLn "----editing----"
     let te = TextEdit (Range (Position 5 0) (Position 5 0)) " "
     applyEdit doc te
     sendNotification TextDocumentDidSave (DidSaveTextDocumentParams doc)
     waitForDiagnostics
+    let pos = Position 119 54
+        params = TextDocumentPositionParams doc
+    print <$> getHover doc pos
