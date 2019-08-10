@@ -8,10 +8,12 @@ packages:
          ./submodules/ghc-mod/
          ./submodules/ghc-mod/core/
          ./submodules/ghc-mod/ghc-project-types
+         /home/matt/lsp-test
+         /home/matt/dyepack
 
 allow-newer: floskell:all
 
-profiling: True
+-- profiling: True
 
 debug-info: 3
 executable-stripping: False

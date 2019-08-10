@@ -44,6 +44,7 @@ import Data.Bits
 import Foreign.Ptr
 
 import Debug.Trace
+import Control.Concurrent
 
 import qualified GHC           as GHC
 import qualified HscMain       as GHC
@@ -62,12 +63,12 @@ import           Haskell.Ide.Engine.GhcUtils
 import System.Mem
 import System.Mem.Weak
 import System.IO
-{-# LANGUAGE MagicHash, UnboxedTuples #-}
 
 import GHC.Exts
 import GHC.Weak
 import GHC.Types
 import GHC.Word
+import Debug.Dyepack
 
 data Void
 
@@ -329,18 +330,7 @@ cacheModule fp modul = do
   liftIO $ hPutStrLn stderr "cacheModule"
   liftIO $ traceEventIO "Cache Module"
   -- check leaks
-  let mask x = intPtrToPtr (complement (shiftL 1 3 - 1) .&. ptrToIntPtr x)
-  case maybeOldUc of
-    Just (UriCacheSuccess (Leakable tcptr psptr) _) -> do
-      liftIO performGC
-      res <- liftIO $ deRefWeak tcptr
-      case res of
-        Just v -> liftIO $ do hPutStrLn stderr $ "leaking: " <> canonical_fp
-                              anyToPtr v >>= hPutStrLn stderr . show . mask
-                              readLn
-
-        Nothing -> liftIO $ hPutStrLn stderr $ "not leaking: " <> canonical_fp
-    Nothing -> return ()
+  checkSpaceLeaks fp maybeOldUc
   -- execute any queued actions for the module
   runDeferredActions canonical_fp res
 
@@ -395,24 +385,28 @@ cacheInfoNoClear uri ci = do
     updateCachedInfo (UriCacheSuccess l old) = UriCacheSuccess l (old { cachedInfo = ci })
     updateCachedInfo UriCacheFailed        = UriCacheFailed
 
+-- | We are about to delete or remove a module from the cache so we check to see if all
+-- of it has been GCd
+checkSpaceLeaks :: MonadIO m => String -> Maybe (UriCacheResult) -> m ()
+checkSpaceLeaks desc mucr = do  -- check leaks
+  let mask x = intPtrToPtr (complement (shiftL 1 3 - 1) .&. ptrToIntPtr x)
+  case mucr of
+    Just (UriCacheSuccess l _) -> do
+      liftIO $ checkDyed l (\v -> 
+        do hPutStrLn stderr $ "leaking: " <> desc
+           anyToPtr v >>= hPutStrLn stderr . show . (\x -> (mask x, x))
+           threadDelay 100000000000
+           )
+    Nothing -> return ()
+
 -- | Deletes a module from the cache
 deleteCachedModule :: (MonadIO m, HasGhcModuleCache m) => FilePath -> m ()
-deleteCachedModule uri = do
-  uri' <- liftIO $ canonicalizePath uri
-  mucr <- (Map.lookup uri' . uriCaches) <$> getModuleCache
+deleteCachedModule fp = do
+  canonical_fp <- liftIO $ canonicalizePath fp
+  mucr <- (Map.lookup canonical_fp . uriCaches) <$> getModuleCache
   liftIO $ hPutStrLn stderr "deleteCachedModule"
-  let (Leakable tcptr psptr) = case mucr of
-                                  Just (UriCacheSuccess l _) -> l
-                                  _ -> error "deleteCachedModule: nothing to delete"
-  modifyCache (\s -> s { uriCaches = Map.delete uri' (uriCaches s) })
-  liftIO $ traceEventIO "Leak Cached Module"
-  {-
-  liftIO performGC
-  res <- liftIO $ deRefWeak tcptr
-  case res of
-    Just _ -> error $ "leaking: " <> uri'
-    Nothing -> error $ "not leaking: " <> uri'
-    -}
+  modifyCache (\s -> s { uriCaches = Map.delete canonical_fp (uriCaches s) })
+  checkSpaceLeaks canonical_fp mucr
 
 -- ---------------------------------------------------------------------
 -- | A ModuleCache is valid for the lifetime of a CachedModule

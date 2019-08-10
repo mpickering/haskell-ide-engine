@@ -63,6 +63,7 @@ library
                      , transformers
                      , unordered-containers
                      , transformers-base
+                     , dyepack
   if os(windows)
     build-depends:     Win32
   else

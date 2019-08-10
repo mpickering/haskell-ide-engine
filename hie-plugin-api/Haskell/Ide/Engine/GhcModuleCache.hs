@@ -2,6 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Haskell.Ide.Engine.GhcModuleCache where
 
@@ -25,17 +26,18 @@ import Language.Haskell.LSP.Types
 import Debug.Trace
 import System.Mem.Weak
 import System.IO
+import Debug.Dyepack
+import GHC.Generics
 
-data Leakable = Leakable
-  { leakableTcMod :: Weak (Maybe TypecheckedModule)
-  , leakablePsMod :: Weak ParsedModule
-  }
+
+type Leakable = Dyed UriCache
 
 mkLeakable :: UriCache -> IO UriCacheResult
-mkLeakable uc@(UriCache { cachedTcMod = tcmod, cachedPsMod = psmod }) = do
-  tcptr <- mkWeakPtr tcmod (Just (hPutStrLn stderr "garbage collected typechecked module"))
-  psptr <- mkWeakPtr psmod (Just (hPutStrLn stderr "garbage collected parsed module"))
-  return (UriCacheSuccess (Leakable tcptr psptr) uc)
+mkLeakable uc@(UriCache { cachedInfo = info }) = do
+  (Dyed as) <- dye uc
+  (Dyed bs) <- dye info 
+  let dyed = Dyed (as ++ bs)
+  return (UriCacheSuccess dyed uc)
 
 type UriCaches = Map.Map FilePath UriCacheResult
 
@@ -53,7 +55,7 @@ data UriCache = UriCache
   -- | Data pertaining to the typechecked module,
   -- not the parsed module
   , cachedData   :: !(Map.Map TypeRep Dynamic)
-  }
+  } deriving Generic
 
 newtype ModuleHash = ModuleHash BS.ByteString deriving (Show, Eq)
 
@@ -75,7 +77,7 @@ data CachedInfo = CachedInfo
   , revMap         :: !(FilePath -> FilePath)
   , newPosToOld    :: !(Position -> Maybe Position)
   , oldPosToNew    :: !(Position -> Maybe Position)
-  }
+  } deriving Generic
 
 class CacheableModule a where
   fromUriCache :: UriCache -> Maybe a

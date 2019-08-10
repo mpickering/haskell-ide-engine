@@ -5,9 +5,11 @@ import Control.Monad.IO.Class
 import Control.Applicative.Combinators
 import Control.Concurrent
 import Control.Monad
+import Language.Haskell.LSP.Test.Replay
 
+main = replaySession "/home/matt/haskell-ide-engine/prof-wrapper" "/home/matt/lsp-test"
 
-main = runSessionWithConfig (defaultConfig { logStdErr = True, logMessages = True, messageTimeout = 500 }) "/home/matt/haskell-ide-engine/prof-wrapper" fullCaps "/home/matt/lsp-test" $ do
+main2 = runSessionWithConfig (defaultConfig { logStdErr = True, logMessages = True, messageTimeout = 500 }) "/home/matt/haskell-ide-engine/prof-wrapper" fullCaps "/home/matt/lsp-test" $ do
   doc <- openDoc "src/Language/Haskell/LSP/Test/Parsing.hs" "haskell"
   waitForDiagnostics
   replicateM_ 50 $ do
