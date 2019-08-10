@@ -13,5 +13,10 @@ allow-newer: floskell:all
 
 profiling: false
 
+debug-info: 3
+executable-stripping: False
+
+library-stripping: False
+
 
 

@@ -36,6 +36,7 @@ library
                        Haskell.Ide.Engine.TypeMap
   build-depends:       base >= 4.9 && < 5
                      , Diff
+                     , ghc-prim
                      , aeson
                      , bytestring-trie
                      , bytestring
