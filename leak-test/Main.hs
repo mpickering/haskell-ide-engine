@@ -9,6 +9,10 @@ import Language.Haskell.LSP.Test.Replay
 
 main = replaySession "/home/matt/haskell-ide-engine/prof-wrapper" "/home/matt/lsp-test"
 
+
+
+
+{-
 main2 = runSessionWithConfig (defaultConfig { logStdErr = True, logMessages = True, messageTimeout = 500 }) "/home/matt/haskell-ide-engine/prof-wrapper" fullCaps "/home/matt/lsp-test" $ do
   doc <- openDoc "src/Language/Haskell/LSP/Test/Parsing.hs" "haskell"
   waitForDiagnostics
@@ -21,3 +25,4 @@ main2 = runSessionWithConfig (defaultConfig { logStdErr = True, logMessages = Tr
     let pos = Position 119 54
         params = TextDocumentPositionParams doc
     print <$> getHover doc pos
+    -}

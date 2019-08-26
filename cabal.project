@@ -8,14 +8,21 @@ packages:
          ./submodules/ghc-mod/
          ./submodules/ghc-mod/core/
          ./submodules/ghc-mod/ghc-project-types
+         ./haskell-lsp
          /home/matt/lsp-test
          /home/matt/dyepack
 
 allow-newer: floskell:all
 
--- profiling: True
+profiling: True
+profiling-detail: exported-functions
+package async
+  profiling-detail: exported-functions
 
-debug-info: 3
+
+--package *
+--  debug-info: 3
+
 executable-stripping: False
 
 library-stripping: False

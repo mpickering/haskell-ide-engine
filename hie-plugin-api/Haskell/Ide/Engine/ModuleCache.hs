@@ -9,6 +9,8 @@
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE UnboxedTuples #-}
+{-# LANGUAGE ForeignFunctionInterface #-}
+
 
 module Haskell.Ide.Engine.ModuleCache
   ( modifyCache
@@ -71,6 +73,9 @@ import GHC.Word
 import Debug.Dyepack
 
 data Void
+
+-- foreign import ccall unsafe "mblock_address_space" address_space_start :: IO Int
+
 
 anyToPtr :: a -> IO (Ptr Void)
 anyToPtr !a = IO (\s -> case anyToAddr# a s of (# s', a' #) -> (# s', Ptr a' #))
@@ -264,7 +269,7 @@ lookupCachedData fp tm info dat = do
     Nothing -> do
       val <- cacheDataProducer tm info
       let dat' = Map.insert (typeOf val) (toDyn val) dat
-          newUc = UriCache info (GHC.tm_parsed_module tm) (Just tm) dat' 
+          newUc = UriCache info (GHC.tm_parsed_module tm) (Just tm) dat'
       res <- liftIO $ mkLeakable newUc
       modifyCache (\s -> s {uriCaches = Map.insert canonical_fp res
                                                   (uriCaches s)})
@@ -392,10 +397,16 @@ checkSpaceLeaks desc mucr = do  -- check leaks
   let mask x = intPtrToPtr (complement (shiftL 1 3 - 1) .&. ptrToIntPtr x)
   case mucr of
     Just (UriCacheSuccess l _) -> do
-      liftIO $ checkDyed l (\v -> 
-        do hPutStrLn stderr $ "leaking: " <> desc
-           anyToPtr v >>= hPutStrLn stderr . show . (\x -> (mask x, x))
-           threadDelay 100000000000
+      liftIO $ checkDyed l (\s v ->
+        do hPutStrLn stderr $ desc <> " leaking: " <>  s
+           p <- anyToPtr v
+           -- Don't complain about "leaking" static closures
+           hPutStrLn stderr . show . (\x -> (mask x, x)) $ p
+           let i = plusPtr nullPtr 283467841536
+           hPutStrLn stderr (show (i, i < p))
+           if (i < p)
+            then threadDelay 100000000000
+            else return  ()
            )
     Nothing -> return ()
 
