@@ -18,7 +18,7 @@ stdenv.mkDerivation {
     ncurses5
     elfutils
     haskellPackages.cabal-install
-    ghc
+    haskell.compiler.ghc865
     haskellPackages.stack
     gdb
   ];

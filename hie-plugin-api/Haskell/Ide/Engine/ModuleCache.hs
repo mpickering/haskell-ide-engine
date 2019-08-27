@@ -335,7 +335,7 @@ cacheModule fp modul = do
   liftIO $ hPutStrLn stderr "cacheModule"
   liftIO $ traceEventIO "Cache Module"
   -- check leaks
-  checkSpaceLeaks fp maybeOldUc
+  --checkSpaceLeaks fp maybeOldUc
   -- execute any queued actions for the module
   runDeferredActions canonical_fp res
 
@@ -417,7 +417,7 @@ deleteCachedModule fp = do
   mucr <- (Map.lookup canonical_fp . uriCaches) <$> getModuleCache
   liftIO $ hPutStrLn stderr "deleteCachedModule"
   modifyCache (\s -> s { uriCaches = Map.delete canonical_fp (uriCaches s) })
-  checkSpaceLeaks canonical_fp mucr
+  --checkSpaceLeaks canonical_fp mucr
 
 -- ---------------------------------------------------------------------
 -- | A ModuleCache is valid for the lifetime of a CachedModule
