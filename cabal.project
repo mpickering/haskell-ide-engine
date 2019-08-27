@@ -15,9 +15,9 @@ packages:
 allow-newer: floskell:all
 
 profiling: True
-profiling-detail: exported-functions
-package async
-  profiling-detail: exported-functions
+--profiling-detail: exported-functions
+--package async
+--  profiling-detail: exported-functions
 
 
 --package *
