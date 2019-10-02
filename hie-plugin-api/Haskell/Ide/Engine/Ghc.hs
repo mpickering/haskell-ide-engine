@@ -140,6 +140,9 @@ captureDiagnostics rfm action = do
   diagRef <- liftIO $ newIORef $ Diagnostics mempty
   errRef <- liftIO $ newIORef []
   let setLogger df = df { log_action = logDiag rfm errRef diagRef }
+      -- Running HIE on projects with -Werror breaks most of the features since all warnings
+      -- will be treated with the same severity of type errors. In order to offer a more useful
+      -- experience, we make sure warnings are always reported as warnings by setting -Wwarn
       unsetWErr df = unSetGeneralFlag' Opt_WarnIsError (emptyFatalWarningFlags df)
       unsetMissingHomeModules = flip wopt_unset Opt_WarnMissingHomeModules
       setRawTokenStream = setGeneralFlag' Opt_KeepRawTokenStream
