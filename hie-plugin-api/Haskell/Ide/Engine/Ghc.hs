@@ -144,7 +144,9 @@ captureDiagnostics rfm action = do
       -- will be treated with the same severity of type errors. In order to offer a more useful
       -- experience, we make sure warnings are always reported as warnings by setting -Wwarn
       unsetWErr df = unSetGeneralFlag' Opt_WarnIsError (emptyFatalWarningFlags df)
+      -- previously, reported repeatedly about Missing Home Modules
       unsetMissingHomeModules = flip wopt_unset Opt_WarnMissingHomeModules
+      -- Preserve comments
       setRawTokenStream = setGeneralFlag' Opt_KeepRawTokenStream
 
       ghcErrRes msg = pure (mempty, [T.pack msg], Nothing)

@@ -79,6 +79,10 @@ modifyCache f = do
 -- in either case
 runActionWithContext :: (MonadIde m, GHC.GhcMonad m, HasGhcModuleCache m, MonadBaseControl IO m)
                      => GHC.DynFlags -> Maybe FilePath -> m a -> m (IdeResult a)
+-- TODO: @fendor, this currently uses a IdeResult to provide either an error
+-- produced by `loadCradle` or the actual result of `m a`.
+-- We need a way to provide diagnostics from this action instead and report them back
+-- to the user.
 runActionWithContext _df Nothing action =
   -- Cradle with no additional flags
   -- dir <- liftIO $ getCurrentDirectory
@@ -92,7 +96,11 @@ runActionWithContext df (Just uri) action = do
     IdeResultOk () -> fmap IdeResultOk action
     IdeResultFail err -> return $ IdeResultFail err
 
-
+-- | Load a cradle based on the lookup result.
+-- This operation may take a very long time. If a new cradle is required,
+-- we now set up the GHC Session and load all modules.
+-- If the current cradle is reused, nothing needs to be done.
+-- If a cached cradle can be used, set the cradle as the current cradle.
 loadCradle :: (MonadIde m, HasGhcModuleCache m, GHC.GhcMonad m
               , MonadBaseControl IO m) => GHC.DynFlags -> LookupCradleResult -> m (IdeResult ())
 loadCradle _ ReuseCradle = do
@@ -115,13 +123,54 @@ loadCradle iniDynFlags (NewCradle fp) = do
   -- Now load the new cradle
   cradle <- liftIO $ findLocalCradle fp
   traceShowM cradle
+  -- set a new session
   liftIO (GHC.newHscEnv iniDynFlags) >>= GHC.setSession
   liftIO $ setCurrentDirectory (BIOS.cradleRootDir cradle)
+  -- initilise the session
   res <- gcatches
     (do
       withProgress "Initialising Cradle" NotCancellable (initializeCradle cradle)
       return $ IdeResultOk ()
-    )
+    ) initializationErrorHandlers
+
+  case res of
+    IdeResultOk () -> do
+      setCurrentCradle cradle
+      return (IdeResultOk ())
+    err -> return err
+ where
+  -- Simple helper function to detect, whether the given cradle is a stack cradle.
+  -- We need this, because we have to append the filepath, for which we are loading the cradle,
+  -- to the options because of the issue described in: https://github.com/mpickering/haskell-ide-engine/issues/10
+  -- tldr: stack does not actually load anything on initialisation, but rather on typechecking.
+  isStackCradle :: BIOS.Cradle -> Bool
+  isStackCradle c = BIOS.actionName (BIOS.cradleOptsProg c) == "stack"
+
+  -- | Actually initialize the cradle.
+  -- Takes a function to report progress.
+  initializeCradle :: GHC.GhcMonad m => BIOS.Cradle -> (Progress -> IO ()) -> m ()
+  initializeCradle cradle f = do
+    let msg = Just (toMessager f)
+    -- Reimplements "initializeFlagsWithCradleWithMessage"
+    -- to add a fp to stack cradle actions
+    -- This is a fix for: https://github.com/mpickering/haskell-ide-engine/issues/10
+    compOpts <- liftIO $ BIOS.getCompilerOptions fp cradle
+    case compOpts of
+      BIOS.CradleNone -> return ()
+      BIOS.CradleFail err -> liftIO $ GHCIO.throwIO err
+      BIOS.CradleSuccess opts -> do
+        let
+          opts' = opts
+                    { BIOS.componentOptions =
+                        BIOS.componentOptions opts ++ [fp | isStackCradle cradle]
+                    }
+
+        targets <- BIOS.initSession opts'
+        GHC.setTargets targets
+        mod_graph <- GHC.depanal [] True
+        void $ GHC.load' GHC.LoadAllTargets msg mod_graph
+
+  initializationErrorHandlers =
     [ ErrorHandler $
       \(err :: GHC.GhcException) -> do
       logm $ "GhcException on cradle initialisation: " ++ show err
@@ -146,40 +195,9 @@ loadCradle iniDynFlags (NewCradle fp) = do
           }
     ]
 
-
-  case res of
-    IdeResultOk () -> do
-      setCurrentCradle cradle
-      return (IdeResultOk ())
-    err -> return err
- where
-  isStackCradle :: BIOS.Cradle -> Bool
-  isStackCradle c = BIOS.actionName (BIOS.cradleOptsProg c) == "stack"
-
-  -- initializeCradle ::
-  initializeCradle :: GHC.GhcMonad m => BIOS.Cradle -> (Progress -> IO ()) -> m ()
-  initializeCradle cradle f = do
-    let msg = Just (toMessager f)
-    -- Reimplements "initializeFlagsWithCradleWithMessage"
-    -- to add a fp to stack cradle actions
-    -- This is a fix for: https://github.com/mpickering/haskell-ide-engine/issues/10
-    compOpts <- liftIO $ BIOS.getCompilerOptions fp cradle
-    case compOpts of
-      BIOS.CradleNone -> return ()
-      BIOS.CradleFail err -> liftIO $ GHCIO.throwIO err
-      BIOS.CradleSuccess opts -> do
-        let
-          opts' = opts
-                    { BIOS.componentOptions =
-                        BIOS.componentOptions opts ++ [fp | isStackCradle cradle]
-                    }
-
-        targets <- BIOS.initSession opts'
-        GHC.setTargets targets
-        -- Get the module graph using the function `getModuleGraph`
-        mod_graph <- GHC.depanal [] True
-        void $ GHC.load' GHC.LoadAllTargets msg mod_graph
-
+-- | Set the given cradle as out current context.
+-- Retrieves all filepaths this cradle is responsible for from the
+-- GHC.moduleGraph and caches them.
 setCurrentCradle :: (HasGhcModuleCache m, GHC.GhcMonad m) => BIOS.Cradle -> m ()
 setCurrentCradle cradle = do
     mg <- GHC.getModuleGraph
@@ -188,7 +206,7 @@ setCurrentCradle cradle = do
     ps' <- liftIO $ mapM canonicalizePath ps
     modifyCache (\s -> s { currentCradle = Just (ps', cradle) })
 
-
+-- | Cache the current cradle the modules it is responsible for.
 cacheCradle :: (HasGhcModuleCache m, GHC.GhcMonad m) => ([FilePath], BIOS.Cradle) -> m ()
 cacheCradle (ds, c) = do
   env <- GHC.getSession
@@ -196,15 +214,13 @@ cacheCradle (ds, c) = do
       new_map = T.fromList (map (, cc) (map B.pack ds))
   modifyCache (\s -> s { cradleCache = T.unionWith (\a _ -> a) new_map (cradleCache s) })
 
--- | Get the Cradle that should be used for a given URI
---getCradle :: (GM.GmEnv m, MonadIO m, HasGhcModuleCache m, GM.GmLog m
---             , MonadBaseControl IO m, ExceptionMonad m, GM.GmOut m)
+-- | Get a cradle search result for a given filepath.
+-- Can be used to decide whether to load a new cradle or if the current one can be reused.
 getCradle :: (GHC.GhcMonad m, HasGhcModuleCache m)
          => FilePath -> m LookupCradleResult
 getCradle fp = do
   canon_fp <- liftIO $ canonicalizePath fp
-  mcache <- getModuleCache
-  return $ lookupCradle canon_fp mcache
+  lookupCradle canon_fp <$> getModuleCache
 
 ifCachedInfo :: (HasGhcModuleCache m, MonadIO m) => FilePath -> a -> (CachedInfo -> m a) -> m a
 ifCachedInfo fp def callback = do

@@ -1,7 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TupleSections #-}
 
 module Haskell.Ide.Engine.GhcModuleCache where
 
@@ -118,11 +117,11 @@ instance Show CachedCradle where
 
 data GhcModuleCache = GhcModuleCache
   { cradleCache :: !(T.Trie CachedCradle)
-              -- ^ map from dirs to cradles
+              -- ^ map from filepaths to cradles
   , uriCaches  :: !UriCaches
   , currentCradle :: Maybe ([FilePath], BIOS.Cradle)
-              -- ^ The current cradle and which directories it is
-              -- responsible for
+              -- ^ The current cradle and which modules/filepaths it
+              -- is responsible for
   } deriving (Show)
 
 -- ---------------------------------------------------------------------
