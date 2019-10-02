@@ -78,21 +78,21 @@ modifyCache f = do
 -- Sets the current directory to the cradle root dir
 -- in either case
 runActionWithContext :: (MonadIde m, GHC.GhcMonad m, HasGhcModuleCache m, MonadBaseControl IO m)
-                     => GHC.DynFlags -> Maybe FilePath -> m a -> m (IdeResult a)
+                     => Maybe FilePath -> m a -> m (IdeResult a)
 -- TODO: @fendor, this currently uses a IdeResult to provide either an error
 -- produced by `loadCradle` or the actual result of `m a`.
 -- We need a way to provide diagnostics from this action instead and report them back
 -- to the user.
-runActionWithContext _df Nothing action =
+runActionWithContext Nothing action =
   -- Cradle with no additional flags
   -- dir <- liftIO $ getCurrentDirectory
   --This causes problems when loading a later package which sets the
   --packageDb
   -- loadCradle df (BIOS.defaultCradle dir)
   fmap IdeResultOk action
-runActionWithContext df (Just uri) action = do
+runActionWithContext (Just uri) action = do
   mcradle <- getCradle uri
-  loadCradle df mcradle >>= \case
+  loadCradle mcradle >>= \case
     IdeResultOk () -> fmap IdeResultOk action
     IdeResultFail err -> return $ IdeResultFail err
 
@@ -102,12 +102,12 @@ runActionWithContext df (Just uri) action = do
 -- If the current cradle is reused, nothing needs to be done.
 -- If a cached cradle can be used, set the cradle as the current cradle.
 loadCradle :: (MonadIde m, HasGhcModuleCache m, GHC.GhcMonad m
-              , MonadBaseControl IO m) => GHC.DynFlags -> LookupCradleResult -> m (IdeResult ())
-loadCradle _ ReuseCradle = do
+              , MonadBaseControl IO m) => LookupCradleResult -> m (IdeResult ())
+loadCradle ReuseCradle = do
   traceM ("Reusing cradle" :: String)
   return (IdeResultOk ())
 
-loadCradle _iniDynFlags (LoadCradle (CachedCradle crd env)) = do
+loadCradle (LoadCradle (CachedCradle crd env)) = do
   traceShowM ("Reload Cradle" :: String, crd)
   -- Cache the existing cradle
   maybe (return ()) cacheCradle =<< (currentCradle <$> getModuleCache)
@@ -115,11 +115,11 @@ loadCradle _iniDynFlags (LoadCradle (CachedCradle crd env)) = do
   setCurrentCradle crd
   return (IdeResultOk ())
 
-loadCradle iniDynFlags (NewCradle fp) = do
+loadCradle  (NewCradle fp) = do
   traceShowM ("New cradle" :: String, fp)
   -- Cache the existing cradle
   maybe (return ()) cacheCradle =<< (currentCradle <$> getModuleCache)
-
+  iniDynFlags <- GHC.getSessionDynFlags
   -- Now load the new cradle
   cradle <- liftIO $ findLocalCradle fp
   traceShowM cradle

@@ -299,7 +299,6 @@ ghcDispatcher
   -> IdeGhcM void
 ghcDispatcher env@DispatcherEnv { docVersionTVar } errorHandler callbackHandler pin
   = do
-  iniDynFlags <- getSessionDynFlags
   forever $ do
     debugm "ghcDispatcher: top of loop"
     GhcRequest tn context mver mid callback action <- liftIO
@@ -308,13 +307,13 @@ ghcDispatcher env@DispatcherEnv { docVersionTVar } errorHandler callbackHandler 
 
     let
       runner act = case context of
-        Nothing  -> runActionWithContext iniDynFlags Nothing act
+        Nothing  -> runActionWithContext Nothing act
         Just uri -> case uriToFilePath uri of
-          Just fp -> runActionWithContext iniDynFlags (Just fp) act
+          Just fp -> runActionWithContext (Just fp) act
           Nothing -> do
             debugm
               "ghcDispatcher:Got malformed uri, running action with default context"
-            runActionWithContext iniDynFlags Nothing act
+            runActionWithContext Nothing act
 
     let
       runWithCallback = do
