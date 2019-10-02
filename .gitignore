@@ -75,5 +75,5 @@ _build/
 stack*.yaml.lock
 shake.yaml.lock
 
-# ignore hie.yaml's for testdata 
-test/**/*.yaml
+# ignore hie.yaml
+hie.yaml
