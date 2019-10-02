@@ -97,7 +97,12 @@ emptyModuleCache = GhcModuleCache T.empty Map.empty Nothing
 
 data LookupCradleResult = ReuseCradle | LoadCradle CachedCradle | NewCradle FilePath
 
--- The boolean indicates whether we have to reload the cradle or not
+-- | Look if for the given filepath there exists a cradle in the module cache.
+-- First checks if the filepath is in the current cradle. If it is, we can
+-- continue to reuse the current cradle.
+-- If the current cradle is not responsible for the module, ask other
+-- cached cradles whether they are responsible for the filepath.
+-- If no cradle is responsible, we need to create a new one.
 lookupCradle :: FilePath -> GhcModuleCache -> LookupCradleResult
 lookupCradle fp gmc = traceShow ("lookupCradle", fp, gmc) $
   case currentCradle gmc of
