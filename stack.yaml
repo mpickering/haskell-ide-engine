@@ -34,6 +34,11 @@ extra-deps:
 - yaml-0.11.1.2@sha256:cbc4ddb233c564967aad27ee47c1cd8fd6a06b9183353e76fe66c9be7c9dfd76
 
 # allow-newer: true
+flags:
+  haskell-ide-engine:
+    pedantic: true
+  hie-plugin-api:
+    pedantic: true
 
 nix:
   packages: [ icu libcxx zlib ]

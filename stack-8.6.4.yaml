@@ -42,6 +42,12 @@ extra-deps:
   - unordered-containers-0.2.10.0@sha256:5e9b095a9283d9e2f064fec73a81a6b6ea0b7fda3f219a8175785d2d2a3de204
 
 # allow-newer: true
+flags:
+  haskell-ide-engine:
+    pedantic: true
+  hie-plugin-api:
+    pedantic: true
+
 
 nix:
   packages: [icu libcxx zlib]
