@@ -38,7 +38,6 @@ import           Data.Maybe
 import           Data.Typeable (Typeable)
 import           System.Directory
 
-import Debug.Trace
 
 import qualified GHC
 import qualified HscMain as GHC
@@ -106,11 +105,11 @@ runActionWithContext df (Just uri) action = do
 loadCradle :: (MonadIde m, HasGhcModuleCache m, GHC.GhcMonad m
               , MonadBaseControl IO m) => GHC.DynFlags -> LookupCradleResult -> m (IdeResult ())
 loadCradle _ ReuseCradle = do
-  traceM ("Reusing cradle" :: String)
+  logm "Reusing cradle"
   return (IdeResultOk ())
 
 loadCradle _iniDynFlags (LoadCradle (CachedCradle crd env)) = do
-  traceShowM ("Reload Cradle" :: String, crd)
+  logm $ "Reload Cradle: " ++ show crd
   -- Cache the existing cradle
   maybe (return ()) cacheCradle =<< (currentCradle <$> getModuleCache)
   GHC.setSession env
@@ -118,13 +117,13 @@ loadCradle _iniDynFlags (LoadCradle (CachedCradle crd env)) = do
   return (IdeResultOk ())
 
 loadCradle iniDynFlags (NewCradle fp) = do
-  traceShowM ("New cradle" :: String, fp)
+  logm $ "New cradle: " ++ fp
   -- Cache the existing cradle
   maybe (return ()) cacheCradle =<< (currentCradle <$> getModuleCache)
 
   -- Now load the new cradle
   cradle <- liftIO $ findLocalCradle fp
-  traceShowM cradle
+  logm $ "Found cradle: " ++ show cradle
   liftIO (GHC.newHscEnv iniDynFlags) >>= GHC.setSession
   liftIO $ setCurrentDirectory (BIOS.cradleRootDir cradle)
   withProgress "Initialising Cradle" NotCancellable (initialiseCradle cradle)
@@ -193,7 +192,7 @@ setCurrentCradle :: (HasGhcModuleCache m, GHC.GhcMonad m) => BIOS.Cradle -> m ()
 setCurrentCradle cradle = do
     mg <- GHC.getModuleGraph
     let ps = mapMaybe (GHC.ml_hs_file . GHC.ms_location) (mgModSummaries mg)
-    traceShowM ps
+    debugm $ "Modules in the cradle: " ++ show ps
     ps' <- liftIO $ mapM canonicalizePath ps
     modifyCache (\s -> s { currentCradle = Just (ps', cradle) })
 
@@ -341,7 +340,9 @@ cacheModules rfm ms = mapM_ go_one ms
   where
     go_one m = case get_fp m of
                  Just fp -> cacheModule (rfm fp) (Right m)
-                 Nothing -> trace ("rfm failed: " ++ (show $ get_fp m)) $ return ()
+                 Nothing -> do
+                  logm $ "Reverse File Map failed in cacheModules for FilePath: " ++ show (get_fp m)
+                  return ()
     get_fp = GHC.ml_hs_file . GHC.ms_location . GHC.pm_mod_summary . GHC.tm_parsed_module
 
 -- | Saves a module to the cache and executes any deferred
