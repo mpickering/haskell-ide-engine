@@ -105,10 +105,12 @@ runActionWithContext df (Just uri) action = do
 loadCradle :: (MonadIde m, HasGhcModuleCache m, GHC.GhcMonad m
               , MonadBaseControl IO m) => GHC.DynFlags -> LookupCradleResult -> m (IdeResult ())
 loadCradle _ ReuseCradle = do
-  logm "Reusing cradle"
+  -- Since we expect this message to show up often, only show in debug mode
+  debugm "Reusing cradle"
   return (IdeResultOk ())
 
 loadCradle _iniDynFlags (LoadCradle (CachedCradle crd env)) = do
+  -- Reloading a cradle happens on component switch
   logm $ "Reload Cradle: " ++ show crd
   -- Cache the existing cradle
   maybe (return ()) cacheCradle =<< (currentCradle <$> getModuleCache)
@@ -117,6 +119,7 @@ loadCradle _iniDynFlags (LoadCradle (CachedCradle crd env)) = do
   return (IdeResultOk ())
 
 loadCradle iniDynFlags (NewCradle fp) = do
+  -- If this message shows up a lot in the logs, it is an indicator for a bug
   logm $ "New cradle: " ++ fp
   -- Cache the existing cradle
   maybe (return ()) cacheCradle =<< (currentCradle <$> getModuleCache)
