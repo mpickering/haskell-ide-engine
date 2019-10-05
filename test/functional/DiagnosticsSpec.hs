@@ -67,6 +67,13 @@ spec = describe "diagnostics providers" $ do
         [diag] <- waitForDiagnosticsSource "bios"
         liftIO $ diag ^. LSP.severity `shouldBe` Just DsWarning
 
+  describe "CPP" $
+    it "Malformed CPP doesn't crash" $
+      runSession hieCommand fullCaps "test/testdata" $ do
+        _ <- openDoc "CPP.hs" "haskell"
+        [diag] <- waitForDiagnosticsSource "bios"
+        liftIO $ diag ^. LSP.severity `shouldBe` Just DsWarning
+
   describe "Warnings are warnings" $
     it "Overrides -Werror" $
       runSession hieCommand fullCaps "test/testdata/wErrorTest" $ do
