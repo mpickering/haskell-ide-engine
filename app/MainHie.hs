@@ -137,7 +137,7 @@ run opts = do
   -- Core.setupLogger mLogFileName ["hie-bios"] biosLogLevel
 
   when (optBiosVerbose opts) $
-    logm "Enabling verbose mode for hie-bios. Output will be on stderr"
+    logm "Enabling verbose mode for hie-bios. This option currently doesn't do anything."
 
   when (optExamplePlugin opts) $
     logm "Enabling Example2 plugin, will insert constant diagnostics etc."
