@@ -38,7 +38,8 @@ module Haskell.Ide.Engine.PluginApi
   , HIE.IdeState(..)
   , HIE.IdeGhcM
   , HIE.runIdeGhcM
-  , runIdeGhcMBare
+  , HIE.runIdeGhcMBare
+  , HIE.runWithContext
   , HIE.IdeM
   , HIE.runIdeM
   , HIE.IdeDeferM
@@ -61,6 +62,8 @@ module Haskell.Ide.Engine.PluginApi
   , BiosLogLevel
   , BiosOptions
   , defaultOptions
+  , HIE.BIOSVerbosity(..)
+  , HIE.CradleOpts(..)
   ) where
 
 
@@ -68,7 +71,7 @@ module Haskell.Ide.Engine.PluginApi
 import qualified GhcProject.Types                    as GP
 import qualified Haskell.Ide.Engine.Ghc              as HIE
 import qualified Haskell.Ide.Engine.GhcModuleCache   as HIE (CachedInfo(..),HasGhcModuleCache(..))
-import qualified Haskell.Ide.Engine.ModuleCache      as HIE (ifCachedModule)
+import qualified Haskell.Ide.Engine.ModuleCache      as HIE (ifCachedModule, runWithContext)
 import qualified Haskell.Ide.Engine.PluginsIdeMonads as HIE
 import qualified Language.Haskell.LSP.Types          as LSP ( filePathToUri )
 import qualified HIE.Bios.Types as HIE
@@ -78,5 +81,5 @@ defaultOptions = HIE.defaultCradleOpts
 type BiosLogLevel = HIE.BIOSVerbosity
 
 type BiosOptions = HIE.CradleOpts
-runIdeGhcMBare :: a
-runIdeGhcMBare = error "Not implemented"
+-- runIdeGhcMBare :: a
+-- runIdeGhcMBare = error "Not implemented"
