@@ -1,5 +1,5 @@
 name:                haskell-ide-engine
-version:             0.13.0.0
+version:             1.0.0.0
 synopsis:            Provide a common engine to power any Haskell IDE
 description:         Please see README.md
 homepage:            http://github.com/githubuser/haskell-ide-engine#readme
@@ -122,7 +122,7 @@ executable hie
                      , hslogger
                      , optparse-simple
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall -Wredundant-constraints
-                       -with-rtsopts=-T
+                       -with-rtsopts=-T -eventlog
   if flag(pedantic)
      ghc-options:      -Werror
   default-language:    Haskell2010

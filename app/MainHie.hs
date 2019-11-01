@@ -109,7 +109,7 @@ run opts = do
                    then L.DEBUG
                    else L.INFO
 
-  Core.setupLogger mLogFileName ["hie", "hie-bios"] logLevel
+  Core.setupLogger mLogFileName ["haskell-lsp"] logLevel
 
   d <- getCurrentDirectory
   -- Get the cabal directory from the cradle
