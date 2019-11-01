@@ -101,9 +101,9 @@ dispatchGhcRequest tn uri ctx n scheduler lc plugin com arg = do
     logger :: RequestCallback IO DynamicJSON
     logger x = logToChan lc (ctx, Right x)
 
-  let req = GReq tn uri Nothing (Just (IdInt n)) logger $
+  let req = GReq tn "plugin-command" uri Nothing (Just (IdInt n)) logger $
         runPluginCommand plugin com (toJSON arg)
-  sendRequest scheduler Nothing req
+  sendRequest scheduler req
 
 
 dispatchIdeRequest :: (Typeable a, ToJSON a)
@@ -114,8 +114,8 @@ dispatchIdeRequest tn ctx scheduler lc lid f = do
     logger :: (Typeable a, ToJSON a) => RequestCallback IO a
     logger x = logToChan lc (ctx, Right (toDynJSON x))
 
-  let req = IReq tn lid logger f
-  sendRequest scheduler Nothing req
+  let req = IReq tn "dispatch" lid logger f
+  sendRequest scheduler req
 
 -- ---------------------------------------------------------------------
 

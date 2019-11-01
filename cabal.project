@@ -6,6 +6,7 @@ packages:
          ./submodules/HaRe
          ./submodules/cabal-helper/
          ./haskell-lsp
+         ./lsp-test
          ./submodules/ghc-mod/ghc-project-types
 
 tests: true
