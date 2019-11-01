@@ -137,7 +137,7 @@ makeRequests
   -> R ()
 makeRequests = go []
  where
-  go acc [] d _ _ callback = callback acc
+  go acc [] _ _ _ callback = callback acc
   go acc (x : xs) d tn reqId callback =
     let reqCallback result = go (acc ++ [result]) xs d tn reqId callback
     in  makeRequest $ IReq tn d reqId reqCallback x
