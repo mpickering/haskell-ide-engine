@@ -48,6 +48,18 @@ dispatchRequestPGoto =
 
 -- ---------------------------------------------------------------------
 
+runWithContext :: Monoid a => Uri -> IdeGhcM (IdeResult a) -> IdeGhcM (IdeResult a)
+runWithContext uri act = case uriToFilePath uri of
+  Just fp -> do
+    df <- getSessionDynFlags
+    res <- runActionWithContext df (Just fp) (IdeResultOk mempty) act
+    case res of
+      IdeResultOk a -> return a
+      IdeResultFail err -> error $ "Could not run in context: " ++ show err
+  Nothing -> error $ "uri not valid: " ++ show uri
+
+-- ---------------------------------------------------------------------
+
 hareSpec :: Spec
 hareSpec = do
   describe "hare plugin commands(old plugin api)" $ do

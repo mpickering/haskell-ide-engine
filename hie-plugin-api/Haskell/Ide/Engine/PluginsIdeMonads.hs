@@ -51,7 +51,6 @@ module Haskell.Ide.Engine.PluginsIdeMonads
   , IdeState(..)
   , IdeGhcM
   , runIdeGhcM
-  , runIdeGhcMBare
   , IdeM
   , runIdeM
   , IdeDeferM
@@ -124,7 +123,6 @@ import           Data.Typeable                  ( TypeRep
 import System.Directory
 import GhcMonad
 import qualified HIE.Bios.Ghc.Api as BIOS
-import qualified HIE.Bios.Types   as BIOS (CradleOpts(..))
 import           GHC.Generics
 import           GHC                            ( HscEnv )
 import Exception
@@ -359,19 +357,6 @@ runIdeGhcM :: IdePlugins -> Maybe (Core.LspFuncs Config) -> TVar IdeState -> Ide
 runIdeGhcM plugins mlf stateVar f = do
   env <- IdeEnv <$> pure mlf <*> getProcessID <*> pure plugins
   flip runReaderT stateVar $ flip runReaderT env $ BIOS.withGhcT f
-
-
--- | Run an IdeGhcM in an external context (e.g. HaRe), with no plugins or LSP functions
--- runIdeGhcMBare :: BiosOptions -> IdeGhcM a -> IO a
-runIdeGhcMBare :: BIOS.CradleOpts -> IdeGhcM a -> IO a
-runIdeGhcMBare _biosOptions f = do
-  let
-    plugins  = IdePlugins Map.empty
-    mlf      = Nothing
-    initialState = IdeState emptyModuleCache Map.empty Map.empty Nothing
-  stateVar <- newTVarIO initialState
-  -- runIdeGhcM biosOptions plugins mlf stateVar f
-  runIdeGhcM plugins mlf stateVar f
 
 -- | A computation that is deferred until the module is cached.
 -- Note that the module may not typecheck, in which case 'UriCacheFailed' is passed

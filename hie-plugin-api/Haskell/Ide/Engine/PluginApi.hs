@@ -38,8 +38,7 @@ module Haskell.Ide.Engine.PluginApi
   , HIE.IdeState(..)
   , HIE.IdeGhcM
   , HIE.runIdeGhcM
-  , HIE.runIdeGhcMBare
-  , HIE.runWithContext
+  , HIE.runActionWithContext
   , HIE.IdeM
   , HIE.runIdeM
   , HIE.IdeDeferM
@@ -55,8 +54,11 @@ module Haskell.Ide.Engine.PluginApi
   , HIE.Diagnostics
   , HIE.AdditionalErrs
   , LSP.filePathToUri
+  , LSP.uriToFilePath
+  , LSP.Uri
   , HIE.ifCachedModule
   , HIE.CachedInfo(..)
+  , HIE.IdeResult(..)
 
   -- * used for tests in HaRe
   , BiosLogLevel
@@ -64,16 +66,18 @@ module Haskell.Ide.Engine.PluginApi
   , defaultOptions
   , HIE.BIOSVerbosity(..)
   , HIE.CradleOpts(..)
+  , emptyIdePlugins
+  , emptyIdeState
   ) where
 
 
 
 import qualified GhcProject.Types                    as GP
 import qualified Haskell.Ide.Engine.Ghc              as HIE
-import qualified Haskell.Ide.Engine.GhcModuleCache   as HIE (CachedInfo(..),HasGhcModuleCache(..))
-import qualified Haskell.Ide.Engine.ModuleCache      as HIE (ifCachedModule, runWithContext)
+import qualified Haskell.Ide.Engine.GhcModuleCache   as HIE (CachedInfo(..),HasGhcModuleCache(..),emptyModuleCache)
+import qualified Haskell.Ide.Engine.ModuleCache      as HIE (ifCachedModule,runActionWithContext )
 import qualified Haskell.Ide.Engine.PluginsIdeMonads as HIE
-import qualified Language.Haskell.LSP.Types          as LSP ( filePathToUri )
+import qualified Language.Haskell.LSP.Types          as LSP ( filePathToUri, uriToFilePath, Uri )
 import qualified HIE.Bios.Types as HIE
 
 defaultOptions :: HIE.CradleOpts
@@ -81,5 +85,9 @@ defaultOptions = HIE.defaultCradleOpts
 type BiosLogLevel = HIE.BIOSVerbosity
 
 type BiosOptions = HIE.CradleOpts
--- runIdeGhcMBare :: a
--- runIdeGhcMBare = error "Not implemented"
+
+emptyIdePlugins :: HIE.IdePlugins
+emptyIdePlugins = HIE.IdePlugins mempty
+
+emptyIdeState :: HIE.IdeState
+emptyIdeState = HIE.IdeState HIE.emptyModuleCache mempty mempty Nothing
