@@ -30,7 +30,6 @@ import qualified Language.Haskell.LSP.Types.Lens              as J
 import           Language.Haskell.Refact.API                  hiding (logm)
 import           Language.Haskell.Refact.HaRe
 import           Language.Haskell.Refact.Utils.Monad          hiding (logm)
-import qualified Data.Rope.UTF16 as Rope
 
 
 -- ---------------------------------------------------------------------
@@ -217,7 +216,7 @@ makeRefactorResult changedFiles = do
                 return $ IdeResultOk mempty
 
           withMappedFile fp defaultResult (fmap IdeResultOk . liftIO . T.readFile)
-        Just vf -> return $ IdeResultOk $ Rope.toText $ _text vf
+        Just vf -> return $ IdeResultOk $ virtualFileText vf
 
       case origTextResult of
         IdeResultFail err -> do
