@@ -27,3 +27,13 @@
 [submodule "hie-bios"]
 	path = hie-bios
 	url = https://github.com/mpickering/hie-bios.git
+
+[submodule "submodules/lsp-test"]
+	path = submodules/lsp-test
+	url = git@github.com:mpickering/lsp-test.git
+	branch = wip/persist-virtual-file
+
+[submodule "submodules/haskell-lsp"]
+	path = submodules/haskell-lsp
+	url = git@github.com:mpickering/haskell-lsp.git
+	branch = wip/persist-virtual-file
