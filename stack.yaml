@@ -8,6 +8,9 @@ extra-deps:
 - ./submodules/HaRe
 - ./submodules/cabal-helper
 - ./submodules/ghc-mod/ghc-project-types
+- ./submodules/haskell-lsp
+- ./submodules/haskell-lsp/haskell-lsp-types
+- ./submodules/lsp-test
 
 - deque-0.4.3@sha256:b988c70a1599b10c7cb643e9c8b0ae4d0166bb2f39c1e13c06a0aeaff29bd9cb,1873
 - ansi-terminal-0.8.2

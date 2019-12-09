@@ -8,6 +8,9 @@ extra-deps:
 - ./submodules/HaRe
 - ./submodules/cabal-helper
 - ./submodules/ghc-mod/ghc-project-types
+- ./submodules/haskell-lsp
+- ./submodules/haskell-lsp/haskell-lsp-types
+- ./submodules/lsp-test
 
 - base-compat-0.9.3
 - brittany-0.12.1.0
