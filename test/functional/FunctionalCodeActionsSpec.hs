@@ -512,14 +512,14 @@ spec = describe "code actions" $ do
     _ <- count 2 waitForDiagnostics -- need to wait for both hlint and ghcmod
     diags <- getCurrentDiagnostics doc
     let params = CodeActionParams doc (Range (Position 2 10) (Position 4 0)) caContext Nothing
-        caContext = CodeActionContext (List diags) (Just (List [CodeActionRefactorInline]))
+        caContext = CodeActionContext (List diags) (Just (List [CodeActionRefactor]))
     ResponseMessage _ _ (Just (List res)) _ <- request TextDocumentCodeAction params
     let cas = map fromAction res
         kinds = map (^. L.kind) cas
     liftIO $ do
       kinds `shouldNotSatisfy` null
-      kinds `shouldNotSatisfy` any (Just CodeActionRefactorInline /=)
-      kinds `shouldSatisfy` all (Just CodeActionRefactorInline ==)
+      kinds `shouldNotSatisfy` any (Just CodeActionRefactor /=)
+      kinds `shouldSatisfy` all (Just CodeActionRefactor ==)
 
 -- ---------------------------------------------------------------------
 -- Parameterized HsImport Spec.
