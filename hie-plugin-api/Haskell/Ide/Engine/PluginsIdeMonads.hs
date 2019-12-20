@@ -530,17 +530,6 @@ instance HasGhcModuleCache IdeM where
     atomically $ modifyTVar' tvar (\st -> st { moduleCache = f (moduleCache st) })
 
 -- ---------------------------------------------------------------------
-
-{-
-instance GHC.HasDynFlags IdeGhcM where
-  getDynFlags = GHC.hsc_dflags <$> GHC.getSession
-
-instance GHC.GhcMonad IdeGhcM where
-  getSession     = GM.unGmlT GM.gmlGetSession
-  setSession env = GM.unGmlT (GM.gmlSetSession env)
-  -}
-
--- ---------------------------------------------------------------------
 -- Results
 -- ---------------------------------------------------------------------
 
