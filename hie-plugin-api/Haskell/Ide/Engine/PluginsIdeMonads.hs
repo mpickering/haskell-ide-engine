@@ -490,7 +490,7 @@ withIndefiniteProgress t c f = do
 data IdeState = IdeState
   { moduleCache :: !GhcModuleCache
   -- | A queue of requests to be performed once a module is loaded
-  , requestQueue :: Map.Map FilePath [UriCacheResult -> IdeM ()]
+  , requestQueue :: !(Map.Map FilePath [UriCacheResult -> IdeM ()])
   , extensibleState :: !(Map.Map TypeRep Dynamic)
   , ghcSession  :: !(Maybe (IORef HscEnv))
   }
