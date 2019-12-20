@@ -63,7 +63,6 @@ module Haskell.Ide.Engine.PluginsIdeMonads
   , getPlugins
   , withProgress
   , withIndefiniteProgress
-  , persistVirtualFile
   , persistVirtualFile'
   , getPersistedFile
   , reverseFileMap
@@ -404,12 +403,6 @@ getVirtualFile uri = do
   case mlf of
     Just lf -> liftIO $ Core.getVirtualFileFunc lf (toNormalizedUri uri)
     Nothing -> return Nothing
-
--- | Persist a virtual file as a temporary file in the filesystem.
--- If the virtual file associated to the given URI does not exist then
--- the FilePath parsed from the URI is returned.
-persistVirtualFile :: (MonadIde m, MonadIO m) => Uri -> m FilePath
-persistVirtualFile uri = fromMaybe (error "persist")  <$> getPersistedFile uri
 
 -- | Worker function for persistVirtualFile without monad constraints.
 --
